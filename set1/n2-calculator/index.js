@@ -21,7 +21,7 @@ const scriptName = path.basename(__filename);
  if (!operation || input1 === undefined || input2 === undefined) {
      console.log("ELEC 3 - Modular Calculator");
      console.log("Student: Ma. Jamaica LJ J. Lago");
-     console.log("Usage: node index.js <operation> <number1> <number2>");
+console.log(`Usage: node ${scriptName} <operation> <number1> <number2>`);
      console.log("Operations: add, subtract, multiply, divide, average");
 
  } else if (!Object.prototype.hasOwnProperty.call(operations, operation)) {
