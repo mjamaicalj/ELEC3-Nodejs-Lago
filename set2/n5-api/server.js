@@ -63,17 +63,49 @@ const server = http.createServer(async (request, response) => {
     }
 
     const match = pathname.match(/^\/api\/books\/(\d+)$/);
-    if (request.method === "GET" && match) {
-        const id = Number(match[1]);
-        const book = books.find((item) => item.id === id);
 
-        if (!book) {
+    if (match) {
+        const id = Number(match[1]);
+        const method = request.method;
+
+        if (!["GET", "PUT", "DELETE"].includes(method)) {
+            response.setHeader("Allow", "GET, PUT, DELETE");
+            return sendJson(response, 405, { message: "Method not allowed" });
+        }
+
+        let details;
+        if (method === "PUT") {
+            try {
+                details = await readBookDetails(request);
+            } catch (error) {
+                const message = error instanceof SyntaxError
+                    ? "Invalid JSON"
+                    : "Title and author are required";
+
+                return sendJson(response, 400, { message });
+            }
+        }
+
+        const index = books.findIndex((book) => book.id === id);
+        if (index === -1) {
             return sendJson(response, 404, { message: "Book not found" });
         }
 
-        return sendJson(response, 200, book);
-    }
+        if (method === "GET") {
+            return sendJson(response, 200, books[index]);
+        }
 
+        if (method === "PUT") {
+            books[index] = { id, ...details };
+            return sendJson(response, 200, books[index]);
+        }
+
+        const [deletedBook] = books.splice(index, 1);
+        return sendJson(response, 200, {
+            message: "Book deleted",
+            book: deletedBook
+        });
+    }
     return sendJson(response, 404, { message: "Route not found" });
 });
 
