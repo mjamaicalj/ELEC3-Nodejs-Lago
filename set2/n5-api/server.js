@@ -18,14 +18,50 @@ function sendJson(response, statusCode, data) {
     response.end(JSON.stringify(data));
 }
 
-const server = http.createServer((request, response) => {
+let nextBookId = 4;
+
+async function readBookDetails(request) {
+    request.setEncoding("utf8");
+
+    let body = "";
+    for await (const chunk of request) {
+        body += chunk;
+    }
+
+    const data = JSON.parse(body);
+    const title = typeof data?.title === "string" ? data.title.trim() : "";
+    const author = typeof data?.author === "string" ? data.author.trim() : "";
+
+    if (!title || !author) {
+        throw new Error("Title and author are required");
+    }
+
+    return { title, author };
+}
+
+const server = http.createServer(async (request, response) => {
     const { pathname } = new URL(request.url, "http://127.0.0.1:8001");
 
     if (request.method === "GET" && pathname === "/api/books") {
         return sendJson(response, 200, books);
     }
 
-    // A path like /api/books/2 gives us the ID in match[1].
+    if (request.method === "POST" && pathname === "/api/books") {
+        try {
+            const details = await readBookDetails(request);
+            const book = { id: nextBookId++, ...details };
+
+            books.push(book);
+            return sendJson(response, 201, book);
+        } catch (error) {
+            const message = error instanceof SyntaxError
+                ? "Invalid JSON"
+                : "Title and author are required";
+
+            return sendJson(response, 400, { message });
+        }
+    }
+
     const match = pathname.match(/^\/api\/books\/(\d+)$/);
     if (request.method === "GET" && match) {
         const id = Number(match[1]);
